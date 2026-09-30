@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>メール判断AI - 確認モード</title>
+  <style>
+    body { font-family: sans-serif; max-width: 800px; margin: 40px auto; padding: 0 20px; background: #f5f5f5; }
+    h1 { color: #333; }
+    .score-bar { background: #e0e0e0; border-radius: 8px; height: 12px; margin: 8px 0 20px; }
+    .score-fill { background: #4caf50; border-radius: 8px; height: 12px; transition: width .3s; }
+    .card { background: #fff; border-radius: 8px; padding: 20px; margin-bottom: 16px; box-shadow: 0 1px 4px rgba(0,0,0,.1); }
+    .card h3 { margin: 0 0 8px; font-size: 1rem; }
+    .meta { color: #666; font-size: .85rem; margin-bottom: 8px; }
+    .body-preview { background: #f9f9f9; border-left: 3px solid #ddd; padding: 8px 12px; font-size: .9rem; color: #444; margin-bottom: 12px; }
+    .badge { display: inline-block; padding: 2px 10px; border-radius: 12px; font-size: .8rem; font-weight: bold; margin-bottom: 10px; }
+    .badge-delete { background: #ffebee; color: #c62828; }
+    .badge-keep   { background: #e8f5e9; color: #2e7d32; }
+    .badge-move   { background: #e3f2fd; color: #1565c0; }
+    .actions { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+    button { padding: 8px 20px; border: none; border-radius: 6px; cursor: pointer; font-size: .9rem; }
+    .btn-approve { background: #4caf50; color: #fff; }
+    .btn-reject  { background: #f44336; color: #fff; }
+    .reject-form { display: none; margin-top: 12px; padding-top: 12px; border-top: 1px solid #eee; }
+    .reject-form select, .reject-form input { padding: 6px 10px; border: 1px solid #ccc; border-radius: 4px; }
+    .btn-confirm-reject { background: #ff7043; color: #fff; }
+    .approve-all { background: #1976d2; color: #fff; width: 100%; padding: 14px; font-size: 1rem; border-radius: 8px; margin-top: 8px; }
+    .done-msg { display: none; color: #4caf50; font-weight: bold; margin-left: 10px; }
+  </style>
+</head>
+<body>
+  <h1>本日の判断一覧</h1>
+  <p>信頼スコア: <strong>{{ "%.0f"|format(score*100) }}%</strong>（自律モード移行まで90%が必要）</p>
+  <div class="score-bar"><div class="score-fill" style="width:{{ score*100 }}%"></div></div>
+  <p>確認待ち: <strong>{{ total }}件</strong></p>
+
+  {% for item in items %}
+  <div class="card" id="card-{{ item.id }}">
+    <div class="meta">No.{{ loop.index }}　差出人: {{ item.sender }}</div>
+    <h3>{{ item.subject }}</h3>
+    <div class="body-preview">{{ item.summary }}</div>
+    <span class="badge badge-{{ item.action }}">
+      {% if item.action == 'delete' %}削除
+      {% elif item.action == 'keep' %}保持
+      {% else %}フォルダ移動{% if item.folder %}（{{ item.folder }}）{% endif %}
+      {% endif %}
+    </span>
+    <div class="actions">
+      <button class="btn-approve" onclick="approve({{ item.id }})">✅ 承認</button>
+      <button class="btn-reject"  onclick="showReject({{ item.id }})">❌ 却下</button>
+      <span class="done-msg" id="done-{{ item.id }}">完了</span>
+    </div>
+    <div class="reject-form" id="reject-{{ item.id }}">
+      <p>正しい操作を選んでください：</p>
+      <select id="action-{{ item.id }}" onchange="toggleFolder({{ item.id }})">
+        <option value="keep">保持</option>
+        <option value="delete">削除</option>
+        <option value="move">フォルダ移動</option>
+      </select>
+      <select id="folder-{{ item.id }}" style="display:none">
+        {% for f in folders %}<option value="{{ f }}">{{ f }}</option>{% endfor %}
+      </select>
+      <button class="btn-confirm-reject" onclick="reject({{ item.id }})">決定</button>
+    </div>
+  </div>
+  {% else %}
+  <p>確認待ちのメールはありません。</p>
+  {% endfor %}
+
+  {% if items %}
+  <button class="approve-all" onclick="approveAll()">すべて承認して実行</button>
+  {% endif %}
+
+<script>
+async function approve(id) {
+  await fetch(`/approve/${id}`, {method:'POST'});
+  document.getElementById(`card-${id}`).style.opacity = '0.4';
+  document.getElementById(`done-${id}`).style.display = 'inline';
+}
+
+function showReject(id) {
+  document.getElementById(`reject-${id}`).style.display = 'block';
+}
+
+function toggleFolder(id) {
+  const action = document.getElementById(`action-${id}`).value;
+  document.getElementById(`folder-${id}`).style.display = action === 'move' ? 'inline' : 'none';
+}
+
+async function reject(id) {
+  const action = document.getElementById(`action-${id}`).value;
+  const folder = document.getElementById(`folder-${id}`).value;
+  const body = new FormData();
+  body.append('correct_action', action);
+  if (action === 'move') body.append('correct_folder', folder);
+  await fetch(`/reject/${id}`, {method:'POST', body});
+  document.getElementById(`card-${id}`).style.opacity = '0.4';
+  document.getElementById(`done-${id}`).style.display = 'inline';
+}
+
+async function approveAll() {
+  if (!confirm('すべて承認して実行しますか？')) return;
+  const res = await fetch('/approve_all', {method:'POST'});
+  const data = await res.json();
+  alert(`${data.count}件を承認しました。`);
+  location.reload();
+}
+</script>
+</body>
+</html>

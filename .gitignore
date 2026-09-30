@@ -1,0 +1,11 @@
+.env
+*.db
+logs/
+__pycache__/
+*.pyc
+token.json
+credentials.json
+client_secret_*.json
+.claude/settings.local.json
+.venv/
+CLAUDE.md

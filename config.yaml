@@ -1,0 +1,28 @@
+trust_score:
+  threshold: 0.90
+  window_size: 50
+
+mail:
+  initial_fetch_days: 7
+
+llm:
+  model: openai/gpt-oss-20b   # Groq で利用可能なモデル名（llama-3.1-8b-instant は廃止済み）
+
+dqn:
+  epsilon_start: 1.0
+  epsilon_end: 0.05
+  epsilon_decay_steps: 200
+  batch_size: 32
+  buffer_size: 1000
+
+folders:
+  - 仕事
+  - プライベート
+  - 領収書
+  - スニーカー
+  - ライブ
+  - 野球
+  - claude
+  - KSK
+  
+

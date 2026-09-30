@@ -1,0 +1,10 @@
+python-dotenv
+pyyaml
+google-api-python-client
+google-auth-httplib2
+google-auth-oauthlib
+groq
+torch
+fastapi
+uvicorn
+jinja2
